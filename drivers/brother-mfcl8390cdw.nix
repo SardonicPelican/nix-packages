@@ -1,60 +1,75 @@
-# Create a file named brother-mfcl8390cdw.nix
-{ stdenv, lib, fetchurl, dpkg, autoPatchelfHook, cups, ghostscript }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  rpm,
+  cpio,
+  autoPatchelfHook,
+  makeWrapper,
+  cups,
+  ghostscript,
+  gnugrep,
+  glibc,
+  file,
+}:
 
-let
-  version = "1.0.0-0";  # Use actual version from Brother's site
-  
-  lprDriverSrc = fetchurl {
-    url = "https://download.brother.com/welcome/dlf103954/mfcl8390cdwlpr-1.0.0-0.i386.deb";
-    sha256 = "1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";  # Replace with actual hash
-  };
-  
-  cupswrapperSrc = fetchurl {
-    url = "https://download.brother.com/welcome/dlf103955/mfcl8390cdwcupswrapper-1.0.0-0.i386.deb";
-    sha256 = "1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";  # Replace with actual hash
-  };
-  
-  scanKeySrc = fetchurl {
-    url = "https://download.brother.com/welcome/dlf103956/brscan4-0.4.9-1.amd64.deb";
-    sha256 = "1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";  # Replace with actual hash
-  };
-  
-in stdenv.mkDerivation {
-  pname = "brother-mfcl8390cdw-drivers";
-  inherit version;
+stdenv.mkDerivation {
+  pname = "brother-mfc-l8390cdw";
+  version = "3.5.1";
 
-  srcs = [ lprDriverSrc cupswrapperSrc scanKeySrc ];
-  
-  nativeBuildInputs = [ dpkg autoPatchelfHook ];
-  buildInputs = [ cups ghostscript ];
-  
+  src = fetchurl {
+    url = "https://download.brother.com/welcome/dlf105782/mfcl8390cdwpdrv-3.5.1-1.i386.rpm";
+    sha256 = "sha256-3cAVrutoFYjJkmzhrUtNY3hVfcJdEhZ2M0FjfENKCoQ=";
+  };
+
+  nativeBuildInputs = [
+    rpm
+    autoPatchelfHook
+    makeWrapper
+    cpio
+  ];
+
+  buildInputs = [
+    cups
+    ghostscript
+    gnugrep
+    glibc
+    file
+  ];
+
   unpackPhase = ''
-    for src in $srcs; do
-      dpkg-deb -x $src source-${basename $src}
-    done
-    sourceRoot=source
+    rpm2cpio $src | cpio -idm
   '';
 
   installPhase = ''
-    mkdir -p $out/lib/cups/filter/
-    mkdir -p $out/share/cups/model/Brother/
-    mkdir -p $out/opt/brother/
-    
-    # Copy driver files
-    cp -r source-*/opt/brother/* $out/opt/brother/
-    
-    # Copy CUPS filters and PPDs
-    cp -v source-*/usr/lib/cups/filter/* $out/lib/cups/filter/ || true
-    cp -v source-*/usr/share/cups/model/Brother/* $out/share/cups/model/Brother/ || true
-    cp -v source-*/usr/share/ppd/Brother/* $out/share/cups/model/Brother/ || true
-    
-    # Make filters executable
-    chmod +x $out/lib/cups/filter/* || true
+    mkdir -p $out/opt/brother/Printers/mfcl8390cdw
+    cp -r opt/brother/Printers/mfcl8390cdw/* $out/opt/brother/Printers/mfcl8390cdw/
+
+    mkdir -p $out/lib/cups/filter
+    mkdir -p $out/share/cups/model
+
+    ln -s $out/opt/brother/Printers/mfcl8390cdw/cupswrapper/brother_lpdwrapper_mfcl8390cdw $out/lib/cups/filter/
+    ln -s $out/opt/brother/Printers/mfcl8390cdw/cupswrapper/brother_mfcl8390cdw_printer_en.ppd $out/share/cups/model/
+
+    # Fix paths in wrapper script
+    substituteInPlace $out/opt/brother/Printers/mfcl8390cdw/cupswrapper/brother_lpdwrapper_mfcl8390cdw \
+      --replace "/opt/brother/Printers/mfcl8390cdw" "$out/opt/brother/Printers/mfcl8390cdw" \
+      --replace "/usr/bin/grep" "${gnugrep}/bin/grep" \
+      --replace "/usr/bin/gs" "${ghostscript}/bin/gs"
+      
+    # Fix permissions
+    chmod +x $out/opt/brother/Printers/mfcl8390cdw/cupswrapper/brother_lpdwrapper_mfcl8390cdw
+    chmod +x $out/lib/cups/filter/brother_lpdwrapper_mfcl8390cdw
   '';
 
   meta = with lib; {
-    description = "Brother MFC-L8390CDW printer drivers";
+    description = "Brother MFC-L8390CDW printer driver";
+    homepage = "https://support.brother.com/";
     license = licenses.unfree;
-    platforms = platforms.linux;
+    platforms = [
+      "x86_64-linux"
+      "aarch64-linux"
+    ];
+    maintainers = [ ];
   };
 }
