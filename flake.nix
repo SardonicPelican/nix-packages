@@ -9,13 +9,13 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [
         "x86_64-linux"
-        "aarch64-linux"
       ];
       perSystem =
         { pkgs, ... }:
         {
           packages = {
             brother-mfcl8390cdw = pkgs.callPackage ./drivers/brother-mfcl8390cdw.nix { };
+            gamescope_3_16_2 = pkgs.callPackage ./pkgs/gamescope_3.16.2/package.nix { };
             # packageB = pkgs.callPackage ./pkgs/packageB { };
           };
         };
