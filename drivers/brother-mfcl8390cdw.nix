@@ -68,7 +68,6 @@ stdenv.mkDerivation {
     license = licenses.unfree;
     platforms = [
       "x86_64-linux"
-      "aarch64-linux"
     ];
     maintainers = [ ];
   };
