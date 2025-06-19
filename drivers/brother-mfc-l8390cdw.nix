@@ -65,7 +65,7 @@ stdenv.mkDerivation {
   meta = with lib; {
     description = "Brother MFC-L8390CDW printer driver";
     homepage = "https://support.brother.com/";
-    license = licenses.unfree;
+    # license = licenses.unfree;
     platforms = [
       "x86_64-linux"
     ];
